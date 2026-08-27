@@ -77,12 +77,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('services/{service}',     [ServiceController::class, 'update']);
         Route::delete('services/{service}',    [ServiceController::class, 'destroy']);
 
-        // Works CRUD (admin sees all)
-        Route::get('works',                    [WorkController::class, 'adminIndex']);
-        Route::post('works',                   [WorkController::class, 'store']);
-        Route::put('works/{work}',             [WorkController::class, 'update']);
-        Route::patch('works/{work}',           [WorkController::class, 'update']);
-        Route::delete('works/{work}',          [WorkController::class, 'destroy']);
+        // Works CRUD (admin sees all) — supports multipart/form-data for image upload
+        Route::get('works',                               [WorkController::class, 'adminIndex']);
+        Route::post('works',                              [WorkController::class, 'store']);
+        Route::put('works/{work}',                        [WorkController::class, 'update']);
+        Route::patch('works/{work}',                      [WorkController::class, 'update']);
+        Route::delete('works/{work}',                     [WorkController::class, 'destroy']);
+        Route::delete('works/{work}/media/{media}',       [WorkController::class, 'destroyMedia']);
 
         // Tags CRUD
         Route::get('tags',                     [TagController::class, 'index']);

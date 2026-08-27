@@ -47,6 +47,18 @@ class StoreWorkRequest extends FormRequest
             'links.*.url'        => ['required_with:links', 'url', 'max:500'],
             'links.*.type'       => ['nullable', 'string', 'max:100'],
             'links.*.sort_order' => ['nullable', 'integer', 'min:0'],
+
+            // File uploads
+            'cover_image_file'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'hero_image_file'    => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'gallery_images'     => ['nullable', 'array', 'max:20'],
+            'gallery_images.*'   => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'gallery_titles'     => ['nullable', 'array'],
+            'gallery_titles.*'   => ['nullable', 'string', 'max:255'],
+            'gallery_alts'       => ['nullable', 'array'],
+            'gallery_alts.*'     => ['nullable', 'string', 'max:255'],
+            'gallery_captions'   => ['nullable', 'array'],
+            'gallery_captions.*' => ['nullable', 'string'],
         ];
     }
 }

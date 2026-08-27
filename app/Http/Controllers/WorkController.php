@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreWorkRequest;
 use App\Http\Requests\UpdateWorkRequest;
 use App\Models\Work;
+use App\Models\WorkMedia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class WorkController extends Controller
@@ -36,9 +38,16 @@ class WorkController extends Controller
         }
 
         $works = $query
+            ->with(['normalizedTags', 'media'])
             ->orderBy('sort_order')
             ->orderBy('created_at', 'desc')
             ->get();
+
+        $works = $works->map(function ($work) {
+            $arr = $work->toArray();
+            $arr['youtube_embed_url'] = $work->youtube_embed_url;
+            return $arr;
+        });
 
         return response()->json($works);
     }
@@ -68,21 +77,33 @@ class WorkController extends Controller
     public function store(StoreWorkRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $data['slug'] = !empty($data['slug']) 
-            ? $data['slug'] 
+        $data['slug'] = !empty($data['slug'])
+            ? $data['slug']
             : $this->generateUniqueSlug($data['title']);
+
+        // Handle cover/hero image file upload
+        if ($request->hasFile('cover_image_file')) {
+            $data['cover_image'] = $request->file('cover_image_file')->store('works/covers', 'public');
+        }
+        if ($request->hasFile('hero_image_file')) {
+            $data['hero_image'] = $request->file('hero_image_file')->store('works/heroes', 'public');
+        }
 
         $work = Work::create($data);
 
         $this->syncRelations($work, $data);
+        $this->syncMedia($work, $request);
 
         $work->load(['media', 'normalizedTags', 'links', 'services']);
 
-        return response()->json(['message' => 'Karya berhasil ditambahkan', 'data' => $work], 201);
+        $arr = $work->toArray();
+        $arr['youtube_embed_url'] = $work->youtube_embed_url;
+
+        return response()->json(['message' => 'Karya berhasil ditambahkan', 'data' => $arr], 201);
     }
 
     /**
-     * PUT /api/admin/works/{work} — Admin update.
+     * PUT /api/admin/works/{work} — Admin update (supports multipart/form-data).
      */
     public function update(UpdateWorkRequest $request, Work $work): JsonResponse
     {
@@ -92,12 +113,26 @@ class WorkController extends Controller
             $data['slug'] = $this->generateUniqueSlug($data['title'], $work->id);
         }
 
+        // Handle cover/hero image file upload — delete old file if replaced
+        if ($request->hasFile('cover_image_file')) {
+            if ($work->cover_image) Storage::disk('public')->delete($work->cover_image);
+            $data['cover_image'] = $request->file('cover_image_file')->store('works/covers', 'public');
+        }
+        if ($request->hasFile('hero_image_file')) {
+            if ($work->hero_image) Storage::disk('public')->delete($work->hero_image);
+            $data['hero_image'] = $request->file('hero_image_file')->store('works/heroes', 'public');
+        }
+
         $work->update($data);
         $this->syncRelations($work, $data);
+        $this->syncMedia($work, $request);
 
         $work->load(['media', 'normalizedTags', 'links', 'services']);
 
-        return response()->json(['message' => 'Karya berhasil diperbarui', 'data' => $work]);
+        $arr = $work->toArray();
+        $arr['youtube_embed_url'] = $work->youtube_embed_url;
+
+        return response()->json(['message' => 'Karya berhasil diperbarui', 'data' => $arr]);
     }
 
     /**
@@ -114,7 +149,7 @@ class WorkController extends Controller
     // ── Admin index: all works including unpublished ─────
     public function adminIndex(Request $request): JsonResponse
     {
-        $query = Work::query();
+        $query = Work::with(['normalizedTags', 'media']);
 
         if ($request->filled('search')) {
             $search = $request->input('search');
@@ -134,7 +169,22 @@ class WorkController extends Controller
 
         $works = $query->orderBy('sort_order')->orderBy('created_at', 'desc')->get();
 
+        $works = $works->map(function ($work) {
+            $arr = $work->toArray();
+            $arr['youtube_embed_url'] = $work->youtube_embed_url;
+            return $arr;
+        });
+
         return response()->json($works);
+    }
+
+    // ── Admin: delete a single gallery image ─────────────
+    public function destroyMedia(Work $work, WorkMedia $media): JsonResponse
+    {
+        if ($media->work_id !== $work->id) abort(403);
+        Storage::disk('public')->delete($media->path);
+        $media->delete();
+        return response()->json(['message' => 'Gambar berhasil dihapus']);
     }
 
     // ── Private helpers ──────────────────────────────────
@@ -174,6 +224,30 @@ class WorkController extends Controller
                     'sort_order' => $link['sort_order'] ?? $i,
                 ]);
             }
+        }
+    }
+
+    /**
+     * Handle gallery image uploads from multipart form.
+     * Expects: gallery_images[] = File[]
+     */
+    private function syncMedia(Work $work, Request $request): void
+    {
+        if (!$request->hasFile('gallery_images')) return;
+
+        $existing = $work->media()->count();
+
+        foreach ($request->file('gallery_images') as $i => $file) {
+            $path = $file->store('works/gallery', 'public');
+            WorkMedia::create([
+                'work_id'    => $work->id,
+                'type'       => 'image',
+                'path'       => $path,
+                'title'      => $request->input("gallery_titles.{$i}"),
+                'alt_text'   => $request->input("gallery_alts.{$i}"),
+                'caption'    => $request->input("gallery_captions.{$i}"),
+                'sort_order' => $existing + $i,
+            ]);
         }
     }
 }
