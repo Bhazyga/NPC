@@ -9,7 +9,7 @@ class StoreServiceRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // admin middleware handles authorization
+        return true;
     }
 
     public function rules(): array
@@ -25,6 +25,17 @@ class StoreServiceRequest extends FormRequest
             'seo_description'   => ['nullable', 'string', 'max:500'],
             'is_published'      => ['nullable', 'boolean'],
             'sort_order'        => ['nullable', 'integer', 'min:0', 'max:9999'],
+
+            // Image file uploads up to 20MB (20480 KB)
+            'hero_image_file'    => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg,gif', 'max:20480'],
+            'gallery_images'     => ['nullable', 'array', 'max:30'],
+            'gallery_images.*'   => ['image', 'mimes:jpg,jpeg,png,webp,svg,gif', 'max:20480'],
+            'gallery_titles'     => ['nullable', 'array'],
+            'gallery_titles.*'   => ['nullable', 'string', 'max:255'],
+            'gallery_alts'       => ['nullable', 'array'],
+            'gallery_alts.*'     => ['nullable', 'string', 'max:255'],
+            'gallery_captions'   => ['nullable', 'array'],
+            'gallery_captions.*' => ['nullable', 'string'],
 
             // Service items
             'items'                   => ['nullable', 'array'],

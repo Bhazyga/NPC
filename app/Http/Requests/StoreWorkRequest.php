@@ -15,26 +15,25 @@ class StoreWorkRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'num'               => ['nullable', 'string', 'max:50'],
             'title'             => ['required', 'string', 'max:255'],
             'slug'              => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('works', 'slug')],
-            'num'               => ['nullable', 'string', 'max:10'],
+            'category'          => ['required', 'string', 'max:255'],
+            'year'              => ['required', 'string', 'max:50'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'description'       => ['nullable', 'string'],
             'client'            => ['nullable', 'string', 'max:255'],
-            'year'              => ['nullable', 'string', 'max:10', 'regex:/^\d{4}$/'],
-            'category'          => ['nullable', 'string', 'max:255'],
-            'image'             => ['nullable', 'string', 'max:500'],
-            'cover_image'       => ['nullable', 'string', 'max:500'],
-            'hero_image'        => ['nullable', 'string', 'max:500'],
-            'color'             => ['nullable', 'string', 'max:30', 'regex:/^#[0-9A-Fa-f]{3,8}$/'],
+            'color'             => ['nullable', 'string', 'max:50'],
+            'featured'          => ['nullable', 'boolean'],
+            'is_published'      => ['nullable', 'boolean'],
+            'is_featured'       => ['nullable', 'boolean'],
+            'sort_order'        => ['nullable', 'integer', 'min:0', 'max:9999'],
             'youtube_url'       => ['nullable', 'url', 'max:500', 'regex:/youtube\.com|youtu\.be/'],
             'seo_title'         => ['nullable', 'string', 'max:255'],
             'seo_description'   => ['nullable', 'string', 'max:500'],
-            'is_published'      => ['nullable', 'boolean'],
-            'is_featured'       => ['nullable', 'boolean'],
-            'featured'          => ['nullable', 'boolean'],
-            'sort_order'        => ['nullable', 'integer', 'min:0', 'max:9999'],
-            'tags'              => ['nullable', 'array'],   // legacy json tags
+
+            'tags'        => ['nullable', 'array'],
+            'tags.*'      => ['string', 'max:100'],
 
             'tag_ids'     => ['nullable', 'array'],
             'tag_ids.*'   => ['integer', 'exists:tags,id'],
@@ -48,11 +47,11 @@ class StoreWorkRequest extends FormRequest
             'links.*.type'       => ['nullable', 'string', 'max:100'],
             'links.*.sort_order' => ['nullable', 'integer', 'min:0'],
 
-            // File uploads
-            'cover_image_file'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'hero_image_file'    => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
-            'gallery_images'     => ['nullable', 'array', 'max:20'],
-            'gallery_images.*'   => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            // Image file uploads up to 20MB (20480 KB)
+            'cover_image_file'   => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg,gif', 'max:20480'],
+            'hero_image_file'    => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp,svg,gif', 'max:20480'],
+            'gallery_images'     => ['nullable', 'array', 'max:30'],
+            'gallery_images.*'   => ['image', 'mimes:jpg,jpeg,png,webp,svg,gif', 'max:20480'],
             'gallery_titles'     => ['nullable', 'array'],
             'gallery_titles.*'   => ['nullable', 'string', 'max:255'],
             'gallery_alts'       => ['nullable', 'array'],

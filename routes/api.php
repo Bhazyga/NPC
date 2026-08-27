@@ -71,19 +71,22 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('users', UserController::class);
 
         // Services CRUD (admin sees all including unpublished)
-        Route::get('services',                 [ServiceController::class, 'adminIndex']);
-        Route::post('services',                [ServiceController::class, 'store']);
-        Route::put('services/{service}',       [ServiceController::class, 'update']);
-        Route::patch('services/{service}',     [ServiceController::class, 'update']);
-        Route::delete('services/{service}',    [ServiceController::class, 'destroy']);
+        // NOTE: {service:id} forces binding by primary key, NOT by slug
+        Route::get('services',                    [ServiceController::class, 'adminIndex']);
+        Route::post('services',                   [ServiceController::class, 'store']);
+        Route::put('services/{service:id}',       [ServiceController::class, 'update']);
+        Route::patch('services/{service:id}',     [ServiceController::class, 'update']);
+        Route::delete('services/{service:id}',                  [ServiceController::class, 'destroy']);
+        Route::delete('services/{service:id}/media/{media:id}', [ServiceController::class, 'destroyMedia']);
 
         // Works CRUD (admin sees all) — supports multipart/form-data for image upload
+        // NOTE: {work:id} forces binding by primary key, NOT by slug (getRouteKeyName returns 'slug')
         Route::get('works',                               [WorkController::class, 'adminIndex']);
         Route::post('works',                              [WorkController::class, 'store']);
-        Route::put('works/{work}',                        [WorkController::class, 'update']);
-        Route::patch('works/{work}',                      [WorkController::class, 'update']);
-        Route::delete('works/{work}',                     [WorkController::class, 'destroy']);
-        Route::delete('works/{work}/media/{media}',       [WorkController::class, 'destroyMedia']);
+        Route::put('works/{work:id}',                     [WorkController::class, 'update']);
+        Route::patch('works/{work:id}',                   [WorkController::class, 'update']);
+        Route::delete('works/{work:id}',                  [WorkController::class, 'destroy']);
+        Route::delete('works/{work:id}/media/{media:id}', [WorkController::class, 'destroyMedia']);
 
         // Tags CRUD
         Route::get('tags',                     [TagController::class, 'index']);

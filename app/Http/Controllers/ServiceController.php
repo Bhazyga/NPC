@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreServiceRequest;
 use App\Http\Requests\UpdateServiceRequest;
 use App\Models\Service;
+use App\Models\ServiceMedia;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ServiceController extends Controller
@@ -16,7 +19,7 @@ class ServiceController extends Controller
     public function index(): JsonResponse
     {
         $services = Service::where('is_published', true)
-            ->with(['items', 'tags'])
+            ->with(['items', 'tags', 'media'])
             ->orderBy('sort_order')
             ->orderBy('title')
             ->get();
@@ -50,9 +53,16 @@ class ServiceController extends Controller
             ? $data['slug'] 
             : $this->generateUniqueSlug($data['title']);
 
+        // Handle hero image file upload
+        if ($request->hasFile('hero_image_file')) {
+            $path = $request->file('hero_image_file')->store('services/heroes', 'public');
+            $data['hero_image'] = Storage::disk('public')->url($path);
+        }
+
         $service = Service::create($data);
 
         $this->syncRelations($service, $data);
+        $this->syncMedia($service, $request);
 
         $service->load(['items', 'media', 'tags', 'links', 'works']);
 
@@ -70,8 +80,19 @@ class ServiceController extends Controller
             $data['slug'] = $this->generateUniqueSlug($data['title'], $service->id);
         }
 
+        // Handle hero image file upload
+        if ($request->hasFile('hero_image_file')) {
+            if ($service->hero_image && Str::contains($service->hero_image, '/storage/')) {
+                $oldPath = Str::after($service->hero_image, '/storage/');
+                Storage::disk('public')->delete($oldPath);
+            }
+            $path = $request->file('hero_image_file')->store('services/heroes', 'public');
+            $data['hero_image'] = Storage::disk('public')->url($path);
+        }
+
         $service->update($data);
         $this->syncRelations($service, $data);
+        $this->syncMedia($service, $request);
 
         $service->load(['items', 'media', 'tags', 'links', 'works']);
 
@@ -83,16 +104,35 @@ class ServiceController extends Controller
      */
     public function destroy(Service $service): JsonResponse
     {
+        foreach ($service->media as $m) {
+            Storage::disk('public')->delete($m->path);
+        }
+        $service->media()->delete();
         $service->links()->delete();
         $service->delete();
 
         return response()->json(['message' => 'Service berhasil dihapus']);
     }
 
+    /**
+     * DELETE /api/admin/services/{service}/media/{media} — Delete specific gallery image.
+     */
+    public function destroyMedia(Service $service, ServiceMedia $media): JsonResponse
+    {
+        if ($media->service_id !== $service->id) {
+            return response()->json(['message' => 'Media tidak terhubung dengan service ini.'], 422);
+        }
+
+        Storage::disk('public')->delete($media->path);
+        $media->delete();
+
+        return response()->json(['message' => 'Gambar gallery berhasil dihapus']);
+    }
+
     // ── Admin: all services (including unpublished) ──────
     public function adminIndex(): JsonResponse
     {
-        $services = Service::with(['items', 'tags'])
+        $services = Service::with(['items', 'tags', 'media', 'links'])
             ->orderBy('sort_order')
             ->orderBy('title')
             ->get();
@@ -148,6 +188,32 @@ class ServiceController extends Controller
                     'sort_order' => $link['sort_order'] ?? $i,
                 ]);
             }
+        }
+    }
+
+    private function syncMedia(Service $service, Request $request): void
+    {
+        if (!$request->hasFile('gallery_images')) {
+            return;
+        }
+
+        $files    = $request->file('gallery_images');
+        $titles   = $request->input('gallery_titles', []);
+        $alts     = $request->input('gallery_alts', []);
+        $captions = $request->input('gallery_captions', []);
+
+        $maxSort = (int) $service->media()->max('sort_order');
+
+        foreach ($files as $index => $file) {
+            $path = $file->store('services/gallery', 'public');
+            $service->media()->create([
+                'type'       => 'image',
+                'path'       => $path,
+                'title'      => $titles[$index]   ?? null,
+                'alt_text'   => $alts[$index]     ?? null,
+                'caption'    => $captions[$index] ?? null,
+                'sort_order' => $maxSort + 1 + $index,
+            ]);
         }
     }
 
