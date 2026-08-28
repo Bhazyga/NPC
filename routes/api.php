@@ -44,8 +44,19 @@ Route::get('/tags', [TagController::class, 'index']);
 ═══════════════════════════════════════════════ */
 Route::middleware('auth:sanctum')->group(function () {
 
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::get('/auth/me',      [AuthController::class, 'me']);
+    Route::post('/auth/logout',          [AuthController::class, 'logout']);
+    Route::get('/auth/me',               [AuthController::class, 'me']);
+    Route::put('/auth/profile',          [AuthController::class, 'updateProfile']);
+    Route::put('/auth/password',         [AuthController::class, 'updatePassword']);
+
+    // Admin stats endpoint
+    Route::get('/admin/stats', function () {
+        return response()->json([
+            'works'    => \App\Models\Work::count(),
+            'services' => \App\Models\Service::count(),
+            'users'    => \App\Models\User::count(),
+        ]);
+    });
 
     // User portal
     Route::get('/user/dashboard', function () {
