@@ -10,25 +10,12 @@ use Illuminate\Support\Facades\Validator;
 class InvitationController extends Controller
 {
     /**
-     * GET /invitation?invitation_id=1
-     * Mengambil daftar RSVP berdasarkan ID event.
+     * GET /api/invitation
+     * Mengambil semua data RSVP terbaru.
      */
-    public function index(Request $request): JsonResponse
+    public function index(): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'invitation_id' => ['required', 'integer', 'min:1'],
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => $validator->errors()->first(),
-                'errors' => $validator->errors(),
-            ], 422);
-        }
-
         $entries = Invitation::query()
-            ->where('invitation_id', $request->integer('invitation_id'))
             ->latest()
             ->get();
 
@@ -39,13 +26,12 @@ class InvitationController extends Controller
     }
 
     /**
-     * POST /invitation
+     * POST /api/invitation
      * Menyimpan RSVP baru.
      */
     public function store(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'invitation_id' => ['required', 'integer', 'min:1'],
             'name' => ['required', 'string', 'max:255'],
             'delegation' => ['nullable', 'string', 'max:255'],
             'attendance' => [
