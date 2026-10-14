@@ -6,7 +6,10 @@ use App\Http\Controllers\TagController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkController;
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Controllers\InvitationController;
 use Illuminate\Support\Facades\Route;
+
+
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +24,9 @@ Route::prefix('auth')->group(function () {
     Route::post('/login',    [AuthController::class, 'login']);
     Route::post('/register', [AuthController::class, 'register']);
 });
+
+// PUBLIC — Invitation RSVP
+Route::post('/invitation', [InvitationController::class, 'store']);
 
 /* ═══════════════════════════════════════════════
    PUBLIC — Services (by slug)
