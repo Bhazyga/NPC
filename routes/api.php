@@ -27,6 +27,7 @@ Route::prefix('auth')->group(function () {
 
 // PUBLIC — Invitation RSVP
 Route::post('/invitation', [InvitationController::class, 'store']);
+Route::get('/invitation', [InvitationController::class, 'index']);
 
 /* ═══════════════════════════════════════════════
    PUBLIC — Services (by slug)
